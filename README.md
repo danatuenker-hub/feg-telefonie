@@ -12,7 +12,7 @@ React (Vite) auf Netlify, Datenbank und Login über Supabase. Twilio wird für d
 | Leadliste mit Filtern (Branche, Bundesland, PLZ-Bereich, Ort, Status, Ergebnis, letzter Anruf, Versuche, Liste, Mitarbeiter, nie angerufen, Wiedervorlage fällig) | ✅ |
 | Leads zuweisen (Mehrfachauswahl oder alle Treffer eines Filters) | ✅ |
 | Lead-Detail: Firmendaten bearbeiten, Ansprechpartner, Notizen, Verlauf | ✅ |
-| Anrufergebnis + Notiz + Wiedervorlage erfassen (vorerst manuell) | ✅ |
+| Anrufergebnis + Notiz + Wiedervorlage erfassen (auch manuell, z. B. vom Handy) | ✅ |
 | Wiedervorlagen-Übersicht (überfällig / heute / demnächst) | ✅ |
 | Sperrliste („Nicht mehr anrufen“) | ✅ |
 | Browser-Telefonie über Twilio, Aufnahme mit Ansage, Speicherung in Supabase (EU), Löschung nach 90 Tagen | ✅ (Twilio-Konto nötig) |
@@ -52,7 +52,7 @@ React (Vite) auf Netlify, Datenbank und Login über Supabase. Twilio wird für d
 ### 3. Twilio (Browser-Telefonie)
 
 1. Konto auf [twilio.com](https://www.twilio.com) anlegen, **Upgrade** (Guthaben aufladen).
-2. Im SQL Editor von Supabase `supabase/migrations/002_telefonie.sql` ausführen.
+2. Im SQL Editor von Supabase `supabase/migrations/002_telefonie.sql` und `003_ergebnisse.sql` ausführen.
 3. **Absendernummer**: *Phone Numbers → Manage → Verified Caller IDs → Add* → eure bestehende Nummer per Kontrollanruf bestätigen
    (oder unter *Buy a number* eine deutsche Nummer kaufen).
 4. **Länder freigeben**: *Voice → Settings → Geo permissions* → nur **Germany** und **Austria** anhaken.
