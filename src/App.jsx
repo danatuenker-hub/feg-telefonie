@@ -9,10 +9,18 @@ import Users from './pages/Users'
 import Password from './pages/Password'
 
 export default function App() {
-  const { session, profile, isAdmin, loading, signOut, recovery, endRecovery } = useAuth()
+  const { session, profile, profileError, isAdmin, loading, signOut, recovery, endRecovery } = useAuth()
 
   if (session === null) return <Login />
   if (loading) return <div className="center muted">Lädt…</div>
+  if (profileError) {
+    return (
+      <div className="center">
+        <p className="error">Angemeldet, aber Profil nicht ladbar: {profileError}</p>
+        <button onClick={signOut}>Abmelden</button>
+      </div>
+    )
+  }
   if (recovery) return <div className="center"><Password onDone={endRecovery} /></div>
   if (!profile?.active) {
     return (

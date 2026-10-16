@@ -12,7 +12,11 @@ export default function Login() {
     setBusy(true)
     setError('')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) setError('Anmeldung fehlgeschlagen. E-Mail oder Passwort prüfen.')
+    if (error) {
+      setError(error.message === 'Invalid login credentials'
+        ? 'E-Mail oder Passwort falsch.'
+        : `Anmeldung fehlgeschlagen: ${error.message}`)
+    }
     setBusy(false)
   }
 
