@@ -74,7 +74,13 @@ export default function App() {
 }
 
 function PhoneStatus() {
-  const { status, error } = usePhone()
+  const { status, error, reconnect } = usePhone()
   const label = { ready: 'Telefon bereit', offline: 'Telefon verbindet…', unavailable: 'Telefon nicht verfügbar' }[status]
-  return <div className="phone-status" style={{ padding: '0 0 8px' }} title={error}><span className={`dot ${status}`} />{label}</div>
+  return (
+    <div style={{ padding: '0 0 8px' }}>
+      <div className="phone-status" style={{ padding: 0 }}><span className={`dot ${status}`} />{label}</div>
+      {error && <div className="small" style={{ color: '#f0a3a3', wordBreak: 'break-word', margin: '4px 0' }}>{error}</div>}
+      {status !== 'ready' && <button className="link small" onClick={reconnect}>Erneut verbinden</button>}
+    </div>
+  )
 }

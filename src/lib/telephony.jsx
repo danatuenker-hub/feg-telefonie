@@ -9,7 +9,12 @@ async function fetchToken(session) {
   const res = await fetch('/.netlify/functions/twilio-token', {
     headers: { Authorization: `Bearer ${session.access_token}` },
   })
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`)
+  if (!res.ok) {
+    const body = await res.text()
+    let msg
+    try { msg = JSON.parse(body).error } catch { msg = body.slice(0, 200) }
+    throw new Error(`Token-Abruf fehlgeschlagen (HTTP ${res.status}): ${msg || 'keine Details'}`)
+  }
   return (await res.json()).token
 }
 
@@ -23,11 +28,14 @@ export function PhoneProvider({ children }) {
   const [error, setError] = useState('')
   const [call, setCall] = useState(null)
   const [incoming, setIncoming] = useState(null)
+  const [attempt, setAttempt] = useState(0)
   const sessionRef = useRef(session)
   sessionRef.current = session
 
   useEffect(() => {
     if (!profile) return
+    setStatus('offline')
+    setError('')
     let device
     let cancelled = false
     ;(async () => {
@@ -36,7 +44,7 @@ export function PhoneProvider({ children }) {
         if (cancelled) return
         device = new Device(token, { codecPreferences: ['opus', 'pcmu'], edge: ['frankfurt', 'dublin'], closeProtection: true })
         device.on('registered', () => setStatus('ready'))
-        device.on('error', (e) => setError(e.message))
+        device.on('error', (e) => setError(`${e.code ? e.code + ': ' : ''}${e.message}`))
         device.on('tokenWillExpire', async () => device.updateToken(await fetchToken(sessionRef.current)))
         device.on('incoming', (conn) => {
           setIncoming(conn)
@@ -49,7 +57,7 @@ export function PhoneProvider({ children }) {
         deviceRef.current = device
       } catch (e) {
         setStatus('unavailable')
-        setError(e.message)
+        setError(`${e.code ? e.code + ': ' : ''}${e.message}`)
       }
     })()
     return () => {
@@ -58,7 +66,9 @@ export function PhoneProvider({ children }) {
       deviceRef.current = null
       setStatus('offline')
     }
-  }, [profile?.id])
+  }, [profile?.id, attempt])
+
+  const reconnect = useCallback(() => setAttempt((a) => a + 1), [])
 
   const dial = useCallback(async (lead, number = lead.phone) => {
     const device = deviceRef.current
@@ -126,7 +136,7 @@ export function PhoneProvider({ children }) {
 
   const rejectIncoming = useCallback(() => { incoming?.reject(); setIncoming(null) }, [incoming])
 
-  const value = { status, error, call, incoming, dial, hangup, toggleMute, sendDigits, clearCall, acceptIncoming, rejectIncoming }
+  const value = { status, error, reconnect, call, incoming, dial, hangup, toggleMute, sendDigits, clearCall, acceptIncoming, rejectIncoming }
   return <PhoneContext.Provider value={value}>{children}</PhoneContext.Provider>
 }
 
