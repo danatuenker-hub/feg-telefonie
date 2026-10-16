@@ -135,6 +135,9 @@ export default function Leads() {
             Wiedervorlage fällig
           </button>
           <button onClick={() => setParams({}, { replace: true })}>Filter zurücksetzen</button>
+          <button className="call" onClick={() => { const p = new URLSearchParams(params); p.delete('page'); navigate(`/dialer?${p}`) }}>
+            ▶ Power Dialer mit diesen Filtern
+          </button>
         </div>
       </div>
 

@@ -103,3 +103,30 @@ tr.clickable { cursor: pointer; }
 .kv dd { margin: 0; }
 
 .login { width: 340px; }
+
+.callbar {
+  position: fixed; right: 20px; bottom: 20px; z-index: 50; background: #151b2b; color: #fff;
+  border-radius: 12px; padding: 12px 14px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25); max-width: 460px;
+}
+.callbar a { color: #fff; }
+.callbar .small { color: #b9c2d6; }
+.callbar button { background: #26304a; color: #fff; border-color: #34405f; }
+.callbar button.danger-fill, .callbar button.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.callbar button.ok { background: var(--ok); border-color: var(--ok); }
+.callbar.ringing-in { animation: pulse 1.2s infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 8px rgba(31,157,85,.35); } }
+.keypad { display: grid; grid-template-columns: repeat(3, 44px); gap: 6px; width: 100%; }
+.phone-status { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 8px 10px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #888; }
+.dot.ready { background: #2ecc71; }
+.dot.unavailable { background: #e67e22; }
+.btn.call, button.call { background: var(--ok); color: #fff; border-color: var(--ok); }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tile { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+.tile-label { font-size: 12px; color: var(--muted); }
+.tile-value { font-size: 22px; font-weight: 650; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.bar-cell { display: flex; align-items: center; gap: 8px; }
+.bar { height: 12px; background: var(--primary); border-radius: 0 4px 4px 0; min-width: 2px; }
+.bar-cell span { font-variant-numeric: tabular-nums; }

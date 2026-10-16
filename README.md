@@ -15,10 +15,11 @@ React (Vite) auf Netlify, Datenbank und Login über Supabase. Twilio wird für d
 | Anrufergebnis + Notiz + Wiedervorlage erfassen (vorerst manuell) | ✅ |
 | Wiedervorlagen-Übersicht (überfällig / heute / demnächst) | ✅ |
 | Sperrliste („Nicht mehr anrufen“) | ✅ |
-| Browser-Telefonie über Twilio, Aufnahme mit Ansage | ⏳ nächster Schritt |
-| Power Dialer | ⏳ |
-| Auswertungen | ⏳ |
-| Transkription, Rückrufe / verpasste Anrufe | ⏳ |
+| Browser-Telefonie über Twilio, Aufnahme mit Ansage, Speicherung in Supabase (EU), Löschung nach 90 Tagen | ✅ (Twilio-Konto nötig) |
+| Power Dialer | ✅ |
+| Auswertungen (Anrufe, Erreichbarkeit, Gesprächszeit, Ergebnisse, Bearbeitungsstand) | ✅ |
+| Rückrufe auf Twilio-Nummern + verpasste Anrufe | ✅ (eigene Twilio-Nummer nötig) |
+| Transkription | ⏳ |
 
 ## Einrichtung
 
@@ -48,7 +49,32 @@ React (Vite) auf Netlify, Datenbank und Login über Supabase. Twilio wird für d
 4. **Domain management → Add domain** → `telefonie.feg.tools`, dann beim Domain-Anbieter einen CNAME-Eintrag `telefonie` → `<deine-site>.netlify.app` setzen.
 5. In Supabase unter **Authentication → URL Configuration** die Site URL auf `https://telefonie.feg.tools` setzen (wichtig für „Passwort vergessen“).
 
-### 3. Lokal entwickeln
+### 3. Twilio (Browser-Telefonie)
+
+1. Konto auf [twilio.com](https://www.twilio.com) anlegen, **Upgrade** (Guthaben aufladen).
+2. Im SQL Editor von Supabase `supabase/migrations/002_telefonie.sql` ausführen.
+3. **Absendernummer**: *Phone Numbers → Manage → Verified Caller IDs → Add* → eure bestehende Nummer per Kontrollanruf bestätigen
+   (oder unter *Buy a number* eine deutsche Nummer kaufen).
+4. **Länder freigeben**: *Voice → Settings → Geo permissions* → nur **Germany** und **Austria** anhaken.
+5. **API Key**: *Account → API keys & tokens → Create API key* (Typ *Standard*) → SID (`SK…`) und Secret notieren.
+6. **TwiML App**: *Voice → TwiML Apps → Create* → Voice Request URL
+   `https://telefonie.feg.tools/.netlify/functions/twilio-voice` (HTTP POST) → SID (`AP…`) notieren.
+7. Gekaufte Twilio-Nummern (für Rückrufe): bei der Nummer *A call comes in* → dieselbe URL eintragen.
+8. In Netlify zusätzlich eintragen und neu deployen:
+   | Name | Wert |
+   |---|---|
+   | `TWILIO_ACCOUNT_SID` | Account SID (`AC…`, Startseite der Twilio Console) |
+   | `TWILIO_AUTH_TOKEN` | Auth Token (Startseite der Twilio Console) |
+   | `TWILIO_API_KEY` | API Key SID (`SK…`) |
+   | `TWILIO_API_SECRET` | API Key Secret |
+   | `TWILIO_TWIML_APP_SID` | TwiML App SID (`AP…`) |
+   | `TWILIO_CALLER_ID` | Standard-Absendernummer, z. B. `+4917612345678` |
+   | `RECORDING_RETENTION_DAYS` | optional, Standard `90` |
+
+Pro Mitarbeiter kann unter *Mitarbeiter → Anzeige-Rufnummer* eine eigene Absendernummer hinterlegt werden.
+Jeder Anruf beginnt beim Angerufenen mit der Ansage „Dieses Gespräch wird zur Qualitätssicherung aufgezeichnet.“
+
+### 4. Lokal entwickeln
 
 ```bash
 cp .env.example .env   # Werte eintragen

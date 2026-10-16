@@ -7,6 +7,7 @@ import { STATUSES, outcomeLabel, statusLabel, stateFromZip } from '../lib/consta
 import { formatPhone, normalizePhone } from '../lib/phone'
 import { fmtDate, fmtDateTime, fmtDuration } from '../lib/format'
 import OutcomeForm from '../components/OutcomeForm'
+import { usePhone } from '../lib/telephony'
 
 const FIELDS = [
   ['company', 'Firma'], ['phone', 'Telefon'], ['phone2', 'Telefon 2'], ['email', 'E-Mail'],
@@ -26,6 +27,7 @@ export default function LeadDetail() {
   const [followups, setFollowups] = useState([])
   const [notFound, setNotFound] = useState(false)
   const [editing, setEditing] = useState(false)
+  const phone = usePhone()
 
   const load = useCallback(async () => {
     const [l, c, n, k, f] = await Promise.all([
@@ -44,6 +46,10 @@ export default function LeadDetail() {
   }, [id])
 
   useEffect(() => { load() }, [load])
+
+  // Nach Gesprächsende Verlauf neu laden (Dauer, Status)
+  const callState = phone.call?.lead?.id === id ? phone.call.state : null
+  useEffect(() => { if (callState === 'ended') setTimeout(load, 1500) }, [callState, load])
 
   if (notFound) return <p>Lead nicht gefunden oder nicht zugewiesen. <a href="/leads">Zur Liste</a></p>
   if (!lead) return <p className="muted">Lädt…</p>
@@ -123,7 +129,7 @@ export default function LeadDetail() {
                     {t.data.outcome && <> – <strong>{outcomeLabel(t.data.outcome)}</strong></>}
                     {t.data.duration_sec > 0 && <span className="muted"> · {fmtDuration(t.data.duration_sec)}</span>}
                   </div>
-                  {t.data.recording_url && <audio controls preload="none" src={t.data.recording_url} style={{ marginTop: 6, width: '100%' }} />}
+                  {t.data.recording_url && <Recording path={t.data.recording_url} />}
                   {t.data.transcript && (
                     <details><summary className="small">Transkript</summary><pre>{t.data.transcript}</pre></details>
                   )}
@@ -141,14 +147,19 @@ export default function LeadDetail() {
         <div>
           <div className="panel">
             <h2>Anrufen</h2>
-            <div className="row" style={{ marginBottom: 12 }}>
-              <a className="btn" href={`tel:${lead.phone}`}>📞 {formatPhone(lead.phone)}</a>
-              {lead.phone2 && <a className="btn" href={`tel:${lead.phone2}`}>📞 {formatPhone(lead.phone2)}</a>}
-            </div>
-            <p className="small muted" style={{ marginTop: 0 }}>
-              Browser-Telefonie folgt mit der Twilio-Anbindung. Bis dahin Anrufe hier manuell erfassen.
-            </p>
-            <OutcomeForm lead={lead} manual submitLabel="Anruf erfassen" onSaved={load} />
+            <CallButtons lead={lead} contacts={contacts} />
+            {phone.call?.lead?.id === id && phone.call.callId && !phone.call.saved ? (
+              <>
+                <p className="small muted">Ergebnis und Notiz können schon während des Gesprächs eingetragen werden.</p>
+                <OutcomeForm key={phone.call.callId} lead={lead} callId={phone.call.callId}
+                  onSaved={() => { phone.clearCall(); load() }} />
+              </>
+            ) : (
+              <details open={phone.status !== 'ready'}>
+                <summary className="small muted" style={{ cursor: 'pointer', marginBottom: 8 }}>Anruf manuell erfassen (z. B. vom Handy)</summary>
+                <OutcomeForm lead={lead} manual submitLabel="Anruf erfassen" onSaved={load} />
+              </details>
+            )}
           </div>
 
           <div className="panel">
@@ -167,6 +178,53 @@ export default function LeadDetail() {
         </div>
       </div>
     </>
+  )
+}
+
+function Recording({ path }) {
+  const [url, setUrl] = useState(null)
+  if (url) return <audio controls autoPlay src={url} style={{ marginTop: 6, width: '100%' }} />
+  return (
+    <button className="link small" onClick={async () => {
+      const { data, error } = await supabase.storage.from('recordings').createSignedUrl(path, 3600)
+      if (error) return alert('Aufnahme nicht verfügbar: ' + error.message)
+      setUrl(data.signedUrl)
+    }}>▶ Aufnahme anhören</button>
+  )
+}
+
+function CallButtons({ lead, contacts }) {
+  const phone = usePhone()
+  const [error, setError] = useState('')
+  const busy = phone.call && phone.call.state !== 'ended'
+  const numbers = [
+    { label: 'Zentrale', number: lead.phone },
+    lead.phone2 && { label: 'Telefon 2', number: lead.phone2 },
+    ...contacts.filter((c) => c.phone?.startsWith('+')).map((c) => ({ label: c.name, number: c.phone })),
+  ].filter(Boolean)
+
+  async function call(number) {
+    setError('')
+    try { await phone.dial(lead, number) } catch (e) { setError(e.message) }
+  }
+
+  if (lead.status === 'gesperrt') return <p className="error">Gesperrt – nicht anrufen.</p>
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div className="row">
+        {numbers.map((n) => phone.status === 'ready' ? (
+          <button key={n.label + n.number} className="call" disabled={busy} onClick={() => call(n.number)}>
+            📞 {n.label}: {formatPhone(n.number)}
+          </button>
+        ) : (
+          <a key={n.label + n.number} className="btn" href={`tel:${n.number}`}>📞 {n.label}: {formatPhone(n.number)}</a>
+        ))}
+      </div>
+      {phone.status !== 'ready' && (
+        <p className="small muted">Browser-Telefonie {phone.status === 'offline' ? 'verbindet…' : `nicht verfügbar${phone.error ? ` (${phone.error})` : ''}`}.</p>
+      )}
+      {error && <p className="error">{error}</p>}
+    </div>
   )
 }
 

@@ -13,6 +13,7 @@ export default function Followups() {
   const [user, setUser] = useState(isAdmin ? '' : profile.id)
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
+  const [missed, setMissed] = useState([])
 
   const load = useCallback(() => {
     setLoading(true)
@@ -21,6 +22,11 @@ export default function Followups() {
       .is('done_at', null).order('due_at').limit(500)
     if (user) q = q.eq('user_id', user)
     q.then(({ data }) => { setRows((data ?? []).filter((r) => r.lead)); setLoading(false) })
+
+    let m = supabase.from('calls').select('id, from_number, started_at, user_id, lead:leads(id, company)')
+      .eq('missed', true).is('seen_at', null).order('started_at', { ascending: false }).limit(100)
+    if (user) m = m.eq('user_id', user)
+    m.then(({ data }) => setMissed(data ?? []))
   }, [user])
 
   useEffect(() => { load() }, [load])
@@ -45,6 +51,30 @@ export default function Followups() {
           </select>
         )}
       </div>
+      {missed.length > 0 && (
+        <div className="panel" style={{ borderColor: 'var(--danger)' }}>
+          <h2>Verpasste Rückrufe <span className="muted small">({missed.length})</span></h2>
+          <table>
+            <thead><tr><th>Zeitpunkt</th><th>Von</th><th>Firma</th>{isAdmin && <th>Mitarbeiter</th>}<th></th></tr></thead>
+            <tbody>
+              {missed.map((c) => (
+                <tr key={c.id}>
+                  <td>{fmtDateTime(c.started_at)}</td>
+                  <td>{formatPhone(c.from_number)}</td>
+                  <td>{c.lead ? <Link to={`/leads/${c.lead.id}`}>{c.lead.company}</Link> : <span className="muted">unbekannt</span>}</td>
+                  {isAdmin && <td>{nameOf(c.user_id)}</td>}
+                  <td>
+                    <button className="link small" onClick={async () => {
+                      await supabase.from('calls').update({ seen_at: new Date().toISOString() }).eq('id', c.id)
+                      load()
+                    }}>erledigt</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       {loading && <p className="muted">Lädt…</p>}
       {!loading && groups.map(([title, list]) => (
         <div className="panel" key={title}>
