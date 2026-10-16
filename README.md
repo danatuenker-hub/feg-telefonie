@@ -59,6 +59,8 @@ React (Vite) auf Netlify, Datenbank und Login über Supabase. Twilio wird für d
 5. **API Key**: *Account → API keys & tokens → Create API key* (Typ *Standard*) → SID (`SK…`) und Secret notieren.
 6. **TwiML App**: *Voice → TwiML Apps → Create* → Voice Request URL
    `https://telefonie.feg.tools/.netlify/functions/twilio-voice` (HTTP POST) → SID (`AP…`) notieren.
+   Solange die eigene Domain noch nicht eingerichtet ist: `https://telefoniefeg.netlify.app/.netlify/functions/twilio-voice`.
+   **Wichtig:** Nach dem Umzug auf die eigene Domain die URL hier anpassen.
 7. Gekaufte Twilio-Nummern (für Rückrufe): bei der Nummer *A call comes in* → dieselbe URL eintragen.
 8. In Netlify zusätzlich eintragen und neu deployen:
    | Name | Wert |
