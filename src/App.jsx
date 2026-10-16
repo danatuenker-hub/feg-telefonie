@@ -12,6 +12,7 @@ import Stats from './pages/Stats'
 import Appointments from './pages/Appointments'
 import AppointmentDetail from './pages/AppointmentDetail'
 import Availability from './pages/Availability'
+import BeraterCalendar from './pages/BeraterCalendar'
 import { roleLabel } from './lib/constants'
 import CallBar from './components/CallBar'
 import { PhoneProvider, usePhone } from './lib/telephony'
@@ -57,6 +58,7 @@ export default function App() {
             <NavLink to="/dialer">Power Dialer</NavLink>
             <NavLink to="/wiedervorlagen">Wiedervorlagen</NavLink>
             <NavLink to="/termine">Termine</NavLink>
+            <NavLink to="/kalender">Berater-Kalender</NavLink>
             <NavLink to="/auswertung">Auswertung</NavLink>
           </>
         )}
@@ -82,6 +84,7 @@ export default function App() {
           {!isBerater && <Route path="/wiedervorlagen" element={<Followups />} />}
           {!isBerater && <Route path="/dialer" element={<Dialer />} />}
           {!isBerater && <Route path="/auswertung" element={<Stats />} />}
+          {!isBerater && <Route path="/kalender" element={<BeraterCalendar />} />}
           {isAdmin && <Route path="/import" element={<Import />} />}
           {isAdmin && <Route path="/mitarbeiter" element={<Users />} />}
           <Route path="*" element={<Navigate to={isBerater ? '/termine' : '/leads'} replace />} />

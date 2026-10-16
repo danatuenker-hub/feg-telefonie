@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { OUTCOMES } from '../lib/constants'
@@ -16,7 +16,7 @@ function defaultFollowup() {
 
 // Nachbearbeitung eines Anrufs: Ergebnis, Notiz, Wiedervorlage.
 // callId gesetzt -> vorhandenen (Twilio-)Anruf ergänzen; sonst wird ein manueller Anruf angelegt.
-export default function OutcomeForm({ lead, contacts = [], callId, submitLabel = 'Speichern', onSaved, manual = false }) {
+export default function OutcomeForm({ lead, contacts = [], callId, submitLabel = 'Speichern', onSaved, manual = false, preset }) {
   const { profile } = useAuth()
   const [outcome, setOutcome] = useState('')
   const [note, setNote] = useState('')
@@ -27,6 +27,16 @@ export default function OutcomeForm({ lead, contacts = [], callId, submitLabel =
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [appt, setAppt] = useState(() => initialAppointment(lead, contacts))
+  const formRef = useRef(null)
+
+  // Klick auf eine freie Zeit in der Berater-Übersicht -> Termin vorbelegen
+  useEffect(() => {
+    if (!preset) return
+    setOutcome('termin')
+    setFollowupAt('')
+    setAppt((a) => ({ ...a, berater_id: preset.berater_id, starts_at: preset.starts_at }))
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [preset])
 
   const meta = OUTCOMES.find((o) => o.value === outcome)
 
@@ -138,7 +148,7 @@ export default function OutcomeForm({ lead, contacts = [], callId, submitLabel =
   }
 
   return (
-    <form className="grid" onSubmit={submit}>
+    <form className="grid" onSubmit={submit} ref={formRef}>
       <div>
         <label>Ergebnis *</label>
         <select value={outcome} onChange={(e) => pickOutcome(e.target.value)} autoFocus>

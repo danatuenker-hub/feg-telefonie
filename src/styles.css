@@ -171,3 +171,7 @@ tr.clickable { cursor: pointer; }
   .table-wrap, .panel table { display: block; overflow-x: auto; }
   .callbar { left: 10px; right: 10px; bottom: 10px; }
 }
+
+.avail-berater { border-top: 1px solid var(--border); padding: 8px 0; }
+.avail-days { display: grid; gap: 4px; margin-top: 6px; }
+.avail-overview .slot { padding: 2px 0; font-size: 11px; margin-bottom: 3px; }

@@ -7,6 +7,7 @@ import { STATUSES, appointmentStatusLabel, outcomeLabel, statusLabel, stateFromZ
 import { formatPhone, normalizePhone } from '../lib/phone'
 import { fmtDate, fmtDateTime, fmtDuration } from '../lib/format'
 import OutcomeForm from '../components/OutcomeForm'
+import AvailabilityOverview from '../components/AvailabilityOverview'
 import { usePhone } from '../lib/telephony'
 
 const FIELDS = [
@@ -28,6 +29,7 @@ export default function LeadDetail() {
   const [appointments, setAppointments] = useState([])
   const [notFound, setNotFound] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [preset, setPreset] = useState(null)
   const phone = usePhone()
 
   const load = useCallback(async () => {
@@ -117,6 +119,13 @@ export default function LeadDetail() {
               )}
           </div>
 
+          <details className="panel" open>
+            <summary style={{ cursor: 'pointer' }}><strong>Freie Beratertermine</strong> <span className="muted small">– Klick auf eine Zeit legt den Termin an</span></summary>
+            <div style={{ marginTop: 10 }}>
+              <AvailabilityOverview zip={lead.zip} compact onPick={(berater_id, starts_at) => setPreset({ berater_id, starts_at, at: Date.now() })} />
+            </div>
+          </details>
+
           <Contacts leadId={id} contacts={contacts} onChange={load} userId={profile.id} />
 
           <div className="panel">
@@ -154,13 +163,13 @@ export default function LeadDetail() {
             {phone.call?.lead?.id === id && phone.call.callId && !phone.call.saved ? (
               <>
                 <p className="small muted">Ergebnis und Notiz können schon während des Gesprächs eingetragen werden.</p>
-                <OutcomeForm key={phone.call.callId} lead={lead} contacts={contacts} callId={phone.call.callId}
+                <OutcomeForm key={phone.call.callId} lead={lead} contacts={contacts} callId={phone.call.callId} preset={preset}
                   onSaved={() => { phone.clearCall(); load() }} />
               </>
             ) : (
-              <details open={phone.status !== 'ready'}>
+              <details open={phone.status !== 'ready' || !!preset}>
                 <summary className="small muted" style={{ cursor: 'pointer', marginBottom: 8 }}>Anruf manuell erfassen (z. B. vom Handy)</summary>
-                <OutcomeForm key={contacts.length} lead={lead} contacts={contacts} manual submitLabel="Anruf erfassen" onSaved={load} />
+                <OutcomeForm key={contacts.length} lead={lead} contacts={contacts} manual submitLabel="Anruf erfassen" onSaved={() => { setPreset(null); load() }} preset={preset} />
               </details>
             )}
           </div>

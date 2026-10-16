@@ -39,6 +39,7 @@ const HEADLINE = {
   created: '📅 <b>Neuer Termin für dich</b>',
   updated: '✏️ <b>Termin geändert</b>',
   cancelled: '❌ <b>Termin abgesagt</b>',
+  reminder: '⏰ <b>Erinnerung: Dein Termin beginnt in einer Stunde</b>',
 }
 
 // Nachrichtentext für einen Termin

@@ -144,7 +144,7 @@ export default function AppointmentDetail() {
 
           <div>
             {(isBerater || isAdmin) && <ResultForm a={a} onSaved={load} />}
-            {call?.recording_url && (isAdmin || call && a.created_by === profile.id) && (
+            {call?.recording_url && (isAdmin || isBerater || a.created_by === profile.id) && (
               <div className="panel">
                 <h2>Gesprächsaufnahme</h2>
                 <p className="small muted">Gespräch vom {fmtDateTime(call.started_at)}, in dem der Termin gelegt wurde.</p>

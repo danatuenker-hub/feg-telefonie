@@ -2,19 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { zipInRegions } from '../lib/constants'
 import { formatPhone } from '../lib/phone'
+import { addDays, defaultWeek, hm, isoDate, mondayOf, weekSlots } from '../lib/slots'
+
+const mondayOfDate = (iso) => mondayOf(new Date(iso))
 
 const DAY_NAMES = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
-
-function mondayOf(d) {
-  const x = new Date(d)
-  x.setHours(0, 0, 0, 0)
-  x.setDate(x.getDate() - ((x.getDay() + 6) % 7))
-  return x
-}
-const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x }
-const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-const atTime = (day, hhmm) => { const [h, m] = hhmm.split(':').map(Number); const x = new Date(day); x.setHours(h, m, 0, 0); return x }
-const hm = (d) => d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
 
 export function initialAppointment(lead, contacts = []) {
   const c = contacts[0]
@@ -30,17 +22,17 @@ export function initialAppointment(lead, contacts = []) {
 // Termin-Eingabe: Berater wählen, freien Slot im Wochenkalender anklicken, Kundendaten ergänzen.
 export default function AppointmentFields({ lead, contacts = [], value, onChange }) {
   const [beraters, setBeraters] = useState([])
-  const [week, setWeek] = useState(() => {
-    // Ab Freitagnachmittag und am Wochenende gleich die nächste Woche zeigen
-    const now = new Date()
-    const late = now.getDay() === 6 || now.getDay() === 0 || (now.getDay() === 5 && now.getHours() >= 14)
-    return late ? addDays(mondayOf(now), 7) : mondayOf(now)
-  })
+  const [week, setWeek] = useState(() => (value.starts_at ? mondayOfDate(value.starts_at) : defaultWeek()))
   const [avail, setAvail] = useState([])
   const [absences, setAbsences] = useState([])
   const [busy, setBusy] = useState([])
   const [manual, setManual] = useState(false)
   const set = (patch) => onChange({ ...value, ...patch })
+
+  // Von außen gesetzte Zeit (z. B. aus der Berater-Übersicht) -> passende Woche anzeigen
+  useEffect(() => {
+    if (value.starts_at) setWeek((w) => { const m = mondayOfDate(value.starts_at); return m.getTime() === w.getTime() ? w : m })
+  }, [value.starts_at])
 
   useEffect(() => {
     supabase.from('profiles').select('id, name, regions').eq('role', 'berater').eq('active', true).order('name')
@@ -64,25 +56,7 @@ export default function AppointmentFields({ lead, contacts = [], value, onChange
     ]).then(([a, ab, b]) => { setAvail(a.data ?? []); setAbsences(ab.data ?? []); setBusy(b.data ?? []) })
   }, [value.berater_id, week])
 
-  const days = useMemo(() => {
-    const now = new Date()
-    const dur = Number(value.duration) || 60
-    return [0, 1, 2, 3, 4, 5, 6].map((i) => {
-      const day = addDays(week, i)
-      const absent = absences.some((a) => a.from_date <= isoDate(day) && a.to_date >= isoDate(day))
-      const slots = []
-      avail.filter((w) => w.weekday === i + 1).sort((a, b) => a.start_time.localeCompare(b.start_time)).forEach((w) => {
-        const end = atTime(day, w.end_time.slice(0, 5))
-        for (let t = atTime(day, w.start_time.slice(0, 5)); t.getTime() + dur * 60000 <= end.getTime(); t = new Date(t.getTime() + 30 * 60000)) {
-          const tEnd = new Date(t.getTime() + dur * 60000)
-          const taken = busy.some((b) => new Date(b.starts_at) < tEnd && new Date(b.ends_at) > t)
-          if (t < now) continue
-          slots.push({ start: t, state: absent ? 'absent' : taken ? 'busy' : 'free' })
-        }
-      })
-      return { day, absent, slots }
-    }).filter((d, i) => i < 5 || d.slots.length) // Wochenende nur, wenn Zeiten hinterlegt sind
-  }, [week, avail, absences, busy, value.duration])
+  const days = useMemo(() => weekSlots(week, avail, absences, busy, Number(value.duration) || 60), [week, avail, absences, busy, value.duration])
 
   const selected = value.starts_at ? new Date(value.starts_at) : null
   const noAvailability = value.berater_id && avail.length === 0

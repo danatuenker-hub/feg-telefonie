@@ -7,6 +7,7 @@ import { formatPhone } from '../lib/phone'
 import { fmtDate, fmtDateTime } from '../lib/format'
 import { outcomeLabel, statusLabel } from '../lib/constants'
 import OutcomeForm from '../components/OutcomeForm'
+import AvailabilityOverview from '../components/AvailabilityOverview'
 
 const FINAL = ['termin', 'kein_interesse', 'bereits_kunde', 'ungueltig', 'gesperrt']
 
@@ -40,6 +41,7 @@ export default function Dialer() {
   const [error, setError] = useState('')
   const [stats, setStats] = useState({ calls: 0, saved: 0 })
   const savedDuringCall = useRef(false)
+  const [preset, setPreset] = useState(null)
 
   useEffect(() => {
     loadQueue(filters).then(setQueue).catch((e) => setError(e.message))
@@ -56,6 +58,7 @@ export default function Dialer() {
         supabase.from('notes').select('*').eq('lead_id', data.id).order('created_at', { ascending: false }).limit(5),
       ])
       setIndex(j)
+      setPreset(null)
       setLead(data)
       setDetails({ contacts: c.data ?? [], notes: n.data ?? [] })
       return data
@@ -175,6 +178,11 @@ export default function Dialer() {
             </div>
 
             <div className="panel">
+              <h2>Freie Beratertermine <span className="muted small">– Klick legt den Termin an</span></h2>
+              <AvailabilityOverview zip={lead.zip} compact onPick={(berater_id, starts_at) => setPreset({ berater_id, starts_at, at: Date.now() })} />
+            </div>
+
+            <div className="panel">
               <h2>Ansprechpartner</h2>
               {details.contacts.length === 0 && <p className="muted">Keine hinterlegt.</p>}
               {details.contacts.map((c) => (
@@ -200,7 +208,7 @@ export default function Dialer() {
           <div className="panel">
             <h2>{phase === 'wrapup' ? 'Nachbearbeitung' : inCall ? 'Im Gespräch' : 'Bereit'}</h2>
             {(phase === 'calling' || phase === 'wrapup') && phone.call?.callId && !phone.call.saved ? (
-              <OutcomeForm key={phone.call.callId} lead={lead} contacts={details.contacts} callId={phone.call.callId}
+              <OutcomeForm key={phone.call.callId} lead={lead} contacts={details.contacts} callId={phone.call.callId} preset={preset}
                 submitLabel={paused ? 'Speichern' : 'Speichern & nächster ›'} onSaved={onSaved} />
             ) : savedDuringCall.current && inCall ? (
               <p className="success">Gespeichert – nach dem Auflegen geht es automatisch weiter.</p>

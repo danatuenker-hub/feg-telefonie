@@ -23,6 +23,8 @@ React (Vite) auf Netlify, Datenbank und Login über Supabase. Twilio wird für d
 | Verfügbarkeiten (Wochenzeiten, Abwesenheiten) | ✅ |
 | Telegram-Benachrichtigung an Berater (neu / geändert / abgesagt) | ✅ (Bot nötig) |
 | Kalender-Abo (iCal) für Berater, Rückmeldung nach Termin, Termin-Auswertung | ✅ |
+| Freie Beratertermine beim Lead/Power Dialer und als Berater-Kalender, Klick legt Termin an | ✅ |
+| Telegram-Erinnerung 1 Stunde vor dem Termin, Aufnahme für den Berater | ✅ |
 | Transkription | ⏳ |
 
 ## Einrichtung
@@ -82,7 +84,7 @@ Jeder Anruf beginnt beim Angerufenen mit der Ansage „Dieses Gespräch wird zur
 
 ### 4. Termine und Telegram
 
-1. Im Supabase SQL Editor `supabase/migrations/004_termine.sql` ausführen.
+1. Im Supabase SQL Editor `supabase/migrations/004_termine.sql` und `005_erinnerung_aufnahme.sql` ausführen.
 2. Unter *Mitarbeiter* Berater anlegen (Rolle „Berater“) und ihr PLZ-Gebiet eintragen, z. B. `80-85, 90`.
 3. Verfügbarkeiten unter *Verfügbarkeiten* pflegen (oder vom Berater selbst).
 4. Telegram-Bot: in Telegram bei **@BotFather** `/newbot` → Namen vergeben → Token kopieren.
