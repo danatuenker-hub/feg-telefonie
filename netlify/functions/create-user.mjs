@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 export default async (req) => {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
 
-  const admin = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+  const admin = createClient(new URL(process.env.VITE_SUPABASE_URL.trim()).origin, process.env.SUPABASE_SERVICE_ROLE_KEY.trim(), {
     auth: { persistSession: false },
   })
 
