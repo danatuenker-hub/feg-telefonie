@@ -9,6 +9,10 @@ import Users from './pages/Users'
 import Password from './pages/Password'
 import Dialer from './pages/Dialer'
 import Stats from './pages/Stats'
+import Appointments from './pages/Appointments'
+import AppointmentDetail from './pages/AppointmentDetail'
+import Availability from './pages/Availability'
+import { roleLabel } from './lib/constants'
 import CallBar from './components/CallBar'
 import { PhoneProvider, usePhone } from './lib/telephony'
 
@@ -35,36 +39,52 @@ export default function App() {
     )
   }
 
+  const isBerater = profile.role === 'berater'
+
   return (
     <PhoneProvider>
     <div className="layout">
       <nav className="sidebar">
         <div className="brand">FEG Telefonie</div>
-        <NavLink to="/leads">Leads</NavLink>
-        <NavLink to="/dialer">Power Dialer</NavLink>
-        <NavLink to="/wiedervorlagen">Wiedervorlagen</NavLink>
-        <NavLink to="/auswertung">Auswertung</NavLink>
+        {isBerater ? (
+          <>
+            <NavLink to="/termine">Meine Termine</NavLink>
+            <NavLink to="/verfuegbarkeit">Verfügbarkeit</NavLink>
+          </>
+        ) : (
+          <>
+            <NavLink to="/leads">Leads</NavLink>
+            <NavLink to="/dialer">Power Dialer</NavLink>
+            <NavLink to="/wiedervorlagen">Wiedervorlagen</NavLink>
+            <NavLink to="/termine">Termine</NavLink>
+            <NavLink to="/auswertung">Auswertung</NavLink>
+          </>
+        )}
+        {isAdmin && <NavLink to="/verfuegbarkeit">Verfügbarkeiten</NavLink>}
         {isAdmin && <NavLink to="/import">CSV-Import</NavLink>}
         {isAdmin && <NavLink to="/mitarbeiter">Mitarbeiter</NavLink>}
         <div className="sidebar-foot">
-          <PhoneStatus />
+          {!isBerater && <PhoneStatus />}
           <div>{profile.name}</div>
-          <div className="muted small">{isAdmin ? 'Admin' : 'Mitarbeiter'}</div>
+          <div className="muted small">{roleLabel(profile.role)}</div>
           <NavLink to="/konto" style={{ padding: '4px 0', background: 'none' }}>Passwort ändern</NavLink>
           <button className="link" onClick={signOut}>Abmelden</button>
         </div>
       </nav>
       <main className="content">
         <Routes>
-          <Route path="/leads" element={<Leads />} />
-          <Route path="/leads/:id" element={<LeadDetail />} />
-          <Route path="/wiedervorlagen" element={<Followups />} />
+          <Route path="/termine" element={<Appointments />} />
+          <Route path="/termine/:id" element={<AppointmentDetail />} />
+          <Route path="/verfuegbarkeit" element={<Availability />} />
           <Route path="/konto" element={<Password />} />
-          <Route path="/dialer" element={<Dialer />} />
-          <Route path="/auswertung" element={<Stats />} />
+          {!isBerater && <Route path="/leads" element={<Leads />} />}
+          {!isBerater && <Route path="/leads/:id" element={<LeadDetail />} />}
+          {!isBerater && <Route path="/wiedervorlagen" element={<Followups />} />}
+          {!isBerater && <Route path="/dialer" element={<Dialer />} />}
+          {!isBerater && <Route path="/auswertung" element={<Stats />} />}
           {isAdmin && <Route path="/import" element={<Import />} />}
           {isAdmin && <Route path="/mitarbeiter" element={<Users />} />}
-          <Route path="*" element={<Navigate to="/leads" replace />} />
+          <Route path="*" element={<Navigate to={isBerater ? '/termine' : '/leads'} replace />} />
         </Routes>
       </main>
       <CallBar />

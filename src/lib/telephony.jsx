@@ -33,7 +33,7 @@ export function PhoneProvider({ children }) {
   sessionRef.current = session
 
   useEffect(() => {
-    if (!profile) return
+    if (!profile || profile.role === 'berater') return // Berater telefonieren nicht über das System
     setStatus('offline')
     setError('')
     let device

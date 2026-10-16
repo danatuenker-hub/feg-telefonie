@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import { ROLES } from '../lib/constants'
+import { setupTelegramWebhook } from '../components/TelegramConnect'
 
 export default function Users() {
   const { session, profile: me } = useAuth()
@@ -40,7 +42,7 @@ export default function Users() {
       <h1>Mitarbeiter</h1>
       <div className="table-wrap" style={{ marginBottom: 16 }}>
         <table>
-          <thead><tr><th>Name</th><th>E-Mail</th><th>Rolle</th><th>Anzeige-Rufnummer</th><th>Aktiv</th></tr></thead>
+          <thead><tr><th>Name</th><th>E-Mail</th><th>Rolle</th><th>Anzeige-Rufnummer</th><th>Berater: PLZ-Gebiet</th><th>Telegram</th><th>Aktiv</th></tr></thead>
           <tbody>
             {profiles.map((p) => (
               <tr key={p.id}>
@@ -48,17 +50,19 @@ export default function Users() {
                 <td>{p.email}</td>
                 <td>
                   <select value={p.role} disabled={p.id === me.id} onChange={(e) => update(p.id, { role: e.target.value })}>
-                    <option value="mitarbeiter">Mitarbeiter</option>
-                    <option value="admin">Admin</option>
+                    {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                   </select>
                 </td>
-                <td><input defaultValue={p.caller_id ?? ''} placeholder="+49…" onBlur={(e) => e.target.value !== (p.caller_id ?? '') && update(p.id, { caller_id: e.target.value.trim() || null })} /></td>
+                <td>{p.role !== 'berater' && <input defaultValue={p.caller_id ?? ''} placeholder="+49…" onBlur={(e) => e.target.value !== (p.caller_id ?? '') && update(p.id, { caller_id: e.target.value.trim() || null })} />}</td>
+                <td>{p.role === 'berater' && <input defaultValue={p.regions ?? ''} placeholder="z. B. 80-85, 90" onBlur={(e) => e.target.value !== (p.regions ?? '') && update(p.id, { regions: e.target.value.trim() || null })} />}</td>
+                <td>{p.telegram_chat_id ? <span className="badge termin">✓ verbunden</span> : <span className="muted small">–</span>}</td>
                 <td><input type="checkbox" style={{ width: 'auto' }} checked={p.active} disabled={p.id === me.id} onChange={(e) => update(p.id, { active: e.target.checked })} /></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      <p className="small muted">PLZ-Gebiet: Bei der Terminbuchung werden passende Berater oben angezeigt. Mehrere Bereiche mit Komma trennen, z. B. „80-85, 90, 972“.</p>
 
       <form className="panel grid grid-4" onSubmit={create}>
         <h2 style={{ gridColumn: '1 / -1' }}>Neuen Zugang anlegen</h2>
@@ -68,13 +72,21 @@ export default function Users() {
         <div>
           <label>Rolle</label>
           <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-            <option value="mitarbeiter">Mitarbeiter</option>
-            <option value="admin">Admin</option>
+            {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
         </div>
         <div><button className="primary" disabled={busy}>Anlegen</button></div>
         {msg && <div style={{ gridColumn: '1 / -1' }}>{msg}</div>}
       </form>
+
+      <div className="panel">
+        <h2>Telegram-Bot</h2>
+        <p className="small muted">Nach dem Eintragen von TELEGRAM_BOT_TOKEN in Netlify einmal hier klicken. Danach können Berater unter „Meine Termine“ ihr Telegram verbinden.</p>
+        <button onClick={async () => {
+          const r = await setupTelegramWebhook()
+          alert(r.ok ? `Telegram-Bot @${r.bot} ist eingerichtet.` : `Fehler: ${r.error}`)
+        }}>Telegram-Bot einrichten</button>
+      </div>
     </>
   )
 }

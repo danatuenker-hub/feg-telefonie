@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { useProfiles } from '../lib/useProfiles'
-import { STATUSES, outcomeLabel, statusLabel, stateFromZip } from '../lib/constants'
+import { STATUSES, appointmentStatusLabel, outcomeLabel, statusLabel, stateFromZip } from '../lib/constants'
 import { formatPhone, normalizePhone } from '../lib/phone'
 import { fmtDate, fmtDateTime, fmtDuration } from '../lib/format'
 import OutcomeForm from '../components/OutcomeForm'
@@ -25,6 +25,7 @@ export default function LeadDetail() {
   const [notes, setNotes] = useState([])
   const [calls, setCalls] = useState([])
   const [followups, setFollowups] = useState([])
+  const [appointments, setAppointments] = useState([])
   const [notFound, setNotFound] = useState(false)
   const [editing, setEditing] = useState(false)
   const phone = usePhone()
@@ -38,6 +39,8 @@ export default function LeadDetail() {
       supabase.from('followups').select('*').eq('lead_id', id).is('done_at', null).order('due_at'),
     ])
     if (!l.data) return setNotFound(true)
+    supabase.from('appointments').select('id, starts_at, kind, status, berater_id').eq('lead_id', id)
+      .order('starts_at', { ascending: false }).then(({ data }) => setAppointments(data ?? []))
     setLead(l.data)
     setContacts(c.data ?? [])
     setNotes(n.data ?? [])
@@ -87,7 +90,7 @@ export default function LeadDetail() {
           {isAdmin && (
             <select value={lead.assigned_to ?? ''} onChange={(e) => update({ assigned_to: e.target.value || null })} style={{ width: 'auto' }}>
               <option value="">– nicht zugewiesen –</option>
-              {profiles.filter((p) => p.active).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              {profiles.filter((p) => p.active && p.role !== 'berater').map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           )}
           {isAdmin && <button className="danger" onClick={remove}>Löschen</button>}
@@ -151,16 +154,28 @@ export default function LeadDetail() {
             {phone.call?.lead?.id === id && phone.call.callId && !phone.call.saved ? (
               <>
                 <p className="small muted">Ergebnis und Notiz können schon während des Gesprächs eingetragen werden.</p>
-                <OutcomeForm key={phone.call.callId} lead={lead} callId={phone.call.callId}
+                <OutcomeForm key={phone.call.callId} lead={lead} contacts={contacts} callId={phone.call.callId}
                   onSaved={() => { phone.clearCall(); load() }} />
               </>
             ) : (
               <details open={phone.status !== 'ready'}>
                 <summary className="small muted" style={{ cursor: 'pointer', marginBottom: 8 }}>Anruf manuell erfassen (z. B. vom Handy)</summary>
-                <OutcomeForm lead={lead} manual submitLabel="Anruf erfassen" onSaved={load} />
+                <OutcomeForm key={contacts.length} lead={lead} contacts={contacts} manual submitLabel="Anruf erfassen" onSaved={load} />
               </details>
             )}
           </div>
+
+          {appointments.length > 0 && (
+            <div className="panel">
+              <h2>Termine</h2>
+              {appointments.map((a) => (
+                <Link key={a.id} to={`/termine/${a.id}`} className="row spread" style={{ padding: '4px 0', color: 'inherit' }}>
+                  <span>{a.kind === 'telefon' ? '📞' : '📍'} {fmtDateTime(a.starts_at)} · {nameOf(a.berater_id)}</span>
+                  <span className={`badge ${a.status}`}>{appointmentStatusLabel(a.status)}</span>
+                </Link>
+              ))}
+            </div>
+          )}
 
           <div className="panel">
             <h2>Offene Wiedervorlagen</h2>

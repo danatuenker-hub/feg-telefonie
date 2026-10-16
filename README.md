@@ -19,6 +19,10 @@ React (Vite) auf Netlify, Datenbank und Login über Supabase. Twilio wird für d
 | Power Dialer | ✅ |
 | Auswertungen (Anrufe, Erreichbarkeit, Gesprächszeit, Ergebnisse, Bearbeitungsstand) | ✅ |
 | Rückrufe auf Twilio-Nummern + verpasste Anrufe | ✅ (eigene Twilio-Nummer nötig) |
+| Rolle „Berater“, Termine mit Berater-Auswahl, Wochenkalender mit freien Zeiten | ✅ |
+| Verfügbarkeiten (Wochenzeiten, Abwesenheiten) | ✅ |
+| Telegram-Benachrichtigung an Berater (neu / geändert / abgesagt) | ✅ (Bot nötig) |
+| Kalender-Abo (iCal) für Berater, Rückmeldung nach Termin, Termin-Auswertung | ✅ |
 | Transkription | ⏳ |
 
 ## Einrichtung
@@ -76,7 +80,19 @@ React (Vite) auf Netlify, Datenbank und Login über Supabase. Twilio wird für d
 Pro Mitarbeiter kann unter *Mitarbeiter → Anzeige-Rufnummer* eine eigene Absendernummer hinterlegt werden.
 Jeder Anruf beginnt beim Angerufenen mit der Ansage „Dieses Gespräch wird zur Qualitätssicherung aufgezeichnet.“
 
-### 4. Lokal entwickeln
+### 4. Termine und Telegram
+
+1. Im Supabase SQL Editor `supabase/migrations/004_termine.sql` ausführen.
+2. Unter *Mitarbeiter* Berater anlegen (Rolle „Berater“) und ihr PLZ-Gebiet eintragen, z. B. `80-85, 90`.
+3. Verfügbarkeiten unter *Verfügbarkeiten* pflegen (oder vom Berater selbst).
+4. Telegram-Bot: in Telegram bei **@BotFather** `/newbot` → Namen vergeben → Token kopieren.
+   In Netlify `TELEGRAM_BOT_TOKEN` eintragen (geheim) und neu deployen.
+   Danach unter *Mitarbeiter* auf **„Telegram-Bot einrichten“** klicken.
+5. Jeder Berater meldet sich an und klickt unter *Meine Termine* auf **„Telegram verbinden“** → im Bot „Start“.
+
+Der Bot sollte ein eigener, neuer Bot sein: ein Bot kann nur an ein System Nachrichten weiterleiten.
+
+### 5. Lokal entwickeln
 
 ```bash
 cp .env.example .env   # Werte eintragen

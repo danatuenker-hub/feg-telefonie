@@ -49,6 +49,7 @@ export default function Stats() {
   const [user, setUser] = useState(isAdmin ? '' : profile.id)
   const [calls, setCalls] = useState(null)
   const [statusCounts, setStatusCounts] = useState({})
+  const [appts, setAppts] = useState([])
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -70,6 +71,15 @@ export default function Stats() {
       }
       setCalls(rows)
     })()
+  }, [range, user])
+
+  // Termine im Zeitraum (nach Termindatum) – für die Berater-Übersicht
+  useEffect(() => {
+    let q = supabase.from('appointments').select('berater_id, created_by, status')
+      .gte('starts_at', new Date(range[0] + 'T00:00:00').toISOString())
+      .lte('starts_at', new Date(range[1] + 'T23:59:59.999').toISOString()).limit(5000)
+    if (user) q = q.eq('created_by', user)
+    q.then(({ data }) => setAppts(data ?? []))
   }, [range, user])
 
   // Aktueller Bearbeitungsstand der Leads (für Mitarbeiter: eigene Leads)
@@ -109,6 +119,11 @@ export default function Stats() {
   }, [calls])
 
   const nameOf = (id) => profiles.find((p) => p.id === id)?.name ?? '–'
+  const byBerater = Object.entries(appts.reduce((m, a) => ((m[a.berater_id] ??= []).push(a), m), {})).map(([uid, list]) => {
+    const done = list.filter((a) => ['durchgefuehrt', 'abschluss', 'kein_abschluss'].includes(a.status)).length
+    const won = list.filter((a) => a.status === 'abschluss').length
+    return { uid, total: list.length, done, won, cancelled: list.filter((a) => ['abgesagt', 'nicht_angetroffen'].includes(a.status)).length, rate: done ? Math.round((won / done) * 100) : null }
+  }).sort((a, b) => b.total - a.total)
   const maxDay = Math.max(1, ...byDay.map((d) => d.calls))
   const totalLeads = Object.values(statusCounts).reduce((a, b) => a + b, 0)
 
@@ -119,7 +134,7 @@ export default function Stats() {
         {isAdmin && (
           <select value={user} onChange={(e) => setUser(e.target.value)} style={{ width: 'auto' }}>
             <option value="">Alle Mitarbeiter</option>
-            {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            {profiles.filter((p) => p.role !== 'berater').map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         )}
       </div>
@@ -193,6 +208,19 @@ export default function Stats() {
                 </table>
               </div>
             )}
+
+            <div className="panel">
+              <h2>Termine nach Berater <span className="muted small">(Termindatum im Zeitraum{user ? ', von diesem Mitarbeiter gelegt' : ''})</span></h2>
+              <table>
+                <thead><tr><th>Berater</th><th>Termine</th><th>Durchgeführt</th><th>Abschlüsse</th><th>Abschlussquote</th><th>Abgesagt / nicht angetroffen</th></tr></thead>
+                <tbody>
+                  {byBerater.length === 0 && <tr><td colSpan={6} className="muted">Keine Termine im Zeitraum.</td></tr>}
+                  {byBerater.map((b) => (
+                    <tr key={b.uid}><td><strong>{nameOf(b.uid)}</strong></td><td>{b.total}</td><td>{b.done}</td><td>{b.won}</td><td>{b.rate == null ? '–' : `${b.rate} %`}</td><td>{b.cancelled}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             <div className="panel">
               <h2>Ergebnisse im Zeitraum</h2>

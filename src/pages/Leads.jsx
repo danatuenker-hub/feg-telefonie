@@ -123,7 +123,7 @@ export default function Leads() {
     }
   }
 
-  const employees = profiles.filter((p) => p.active)
+  const employees = profiles.filter((p) => p.active && p.role !== 'berater')
   const selCount = allMatching ? total : selected.size
 
   return (

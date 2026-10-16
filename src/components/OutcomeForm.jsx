@@ -3,6 +3,9 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { OUTCOMES } from '../lib/constants'
 import { toLocalInput } from '../lib/format'
+import { notifyAppointment } from '../lib/notify'
+import { toast } from '../lib/toast'
+import AppointmentFields, { appointmentRow, initialAppointment, validateAppointment } from './AppointmentFields'
 
 function defaultFollowup() {
   const d = new Date()
@@ -13,7 +16,7 @@ function defaultFollowup() {
 
 // Nachbearbeitung eines Anrufs: Ergebnis, Notiz, Wiedervorlage.
 // callId gesetzt -> vorhandenen (Twilio-)Anruf ergänzen; sonst wird ein manueller Anruf angelegt.
-export default function OutcomeForm({ lead, callId, submitLabel = 'Speichern', onSaved, manual = false }) {
+export default function OutcomeForm({ lead, contacts = [], callId, submitLabel = 'Speichern', onSaved, manual = false }) {
   const { profile } = useAuth()
   const [outcome, setOutcome] = useState('')
   const [note, setNote] = useState('')
@@ -23,6 +26,7 @@ export default function OutcomeForm({ lead, callId, submitLabel = 'Speichern', o
   const [minutes, setMinutes] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [appt, setAppt] = useState(() => initialAppointment(lead, contacts))
 
   const meta = OUTCOMES.find((o) => o.value === outcome)
 
@@ -47,11 +51,37 @@ export default function OutcomeForm({ lead, callId, submitLabel = 'Speichern', o
     e.preventDefault()
     if (!outcome) return setError('Bitte ein Ergebnis wählen.')
     if (meta?.followup && !followupAt) return setError('Bitte Datum und Uhrzeit für die Wiedervorlage angeben.')
+    if (outcome === 'termin') {
+      const problem = validateAppointment(appt)
+      if (problem) return setError(problem)
+    }
     setBusy(true)
     setError('')
     try {
-      if (callId) {
-        const { error } = await supabase.from('calls').update({ outcome }).eq('id', callId)
+      // Termin zuerst anlegen – schlägt das fehl, bleibt das Ergebnis ungespeichert
+      let appointmentId = null
+      let usedCallId = callId
+      if (!callId && outcome === 'termin') {
+        const { data, error } = await supabase.from('calls').insert({
+          lead_id: lead.id, user_id: profile.id, to_number: lead.phone, started_at: new Date().toISOString(),
+        }).select('id').single()
+        if (error) throw error
+        usedCallId = data.id
+      }
+      if (outcome === 'termin') {
+        const { data, error } = await supabase.from('appointments')
+          .insert({ ...appointmentRow(appt, lead), created_by: profile.id, call_id: usedCallId }).select('id').single()
+        if (error) throw error
+        appointmentId = data.id
+      }
+
+      if (usedCallId) {
+        const patch = { outcome }
+        if (!callId) {
+          const sec = Math.round(Number(String(minutes).replace(',', '.')) * 60) || 0
+          Object.assign(patch, { duration_sec: sec, answered_at: sec ? new Date().toISOString() : null, ended_at: new Date().toISOString() })
+        }
+        const { error } = await supabase.from('calls').update(patch).eq('id', usedCallId)
         if (error) throw error
       } else {
         const sec = Math.round(Number(String(minutes).replace(',', '.')) * 60) || 0
@@ -86,11 +116,20 @@ export default function OutcomeForm({ lead, callId, submitLabel = 'Speichern', o
       }
 
       const patch = {}
-      if ((contractEnd || null) !== (lead.contract_end || null)) patch.contract_end = contractEnd || null
-      if ((supplier.trim() || null) !== (lead.current_supplier || null)) patch.current_supplier = supplier.trim() || null
+      const newEnd = outcome === 'termin' ? appt.contract_end : contractEnd
+      const newSupplier = outcome === 'termin' ? appt.current_supplier : supplier
+      if ((newEnd || null) !== (lead.contract_end || null)) patch.contract_end = newEnd || null
+      if ((newSupplier.trim() || null) !== (lead.current_supplier || null)) patch.current_supplier = newSupplier.trim() || null
       if (Object.keys(patch).length) await supabase.from('leads').update(patch).eq('id', lead.id)
 
+      if (appointmentId) {
+        const res = await notifyAppointment(appointmentId, 'created')
+        if (res.sent) toast('Termin gespeichert – Berater wurde per Telegram informiert.')
+        else toast(`Termin gespeichert. Keine Telegram-Nachricht: ${res.reason ?? 'unbekannter Fehler'}`, 'warn')
+      }
+
       setOutcome(''); setNote(''); setFollowupAt(''); setMinutes('')
+      setAppt(initialAppointment(lead, contacts))
       onSaved?.()
     } catch (err) {
       setError(err.message)
@@ -119,8 +158,9 @@ export default function OutcomeForm({ lead, callId, submitLabel = 'Speichern', o
           </div>
         </div>
       )}
+      {outcome === 'termin' && <AppointmentFields lead={lead} contacts={contacts} value={appt} onChange={setAppt} />}
       <div>
-        <label>Notiz</label>
+        <label>{outcome === 'termin' ? 'Notiz zum Gespräch (intern)' : 'Notiz'}</label>
         <textarea value={note} onChange={(e) => setNote(e.target.value)}
           onKeyDown={(e) => (e.metaKey || e.ctrlKey) && e.key === 'Enter' && submit(e)}
           placeholder="Was wurde besprochen? (Strg/⌘ + Enter speichert)" />

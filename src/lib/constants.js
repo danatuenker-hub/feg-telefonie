@@ -74,3 +74,33 @@ export function stateFromZip(zip) {
   if (!/^\d{5}$/.test(z)) return null
   return ZIP2_STATE[z.slice(0, 2)] ?? null
 }
+
+export const ROLES = [
+  { value: 'mitarbeiter', label: 'Callcenter' },
+  { value: 'berater', label: 'Berater' },
+  { value: 'admin', label: 'Admin' },
+]
+export const roleLabel = (v) => ROLES.find((r) => r.value === v)?.label ?? v
+
+export const APPOINTMENT_STATUSES = [
+  { value: 'geplant', label: 'Geplant' },
+  { value: 'bestaetigt', label: 'Bestätigt' },
+  { value: 'durchgefuehrt', label: 'Durchgeführt' },
+  { value: 'abschluss', label: 'Abschluss ✓' },
+  { value: 'kein_abschluss', label: 'Kein Abschluss' },
+  { value: 'nicht_angetroffen', label: 'Nicht angetroffen' },
+  { value: 'verschoben', label: 'Verschoben' },
+  { value: 'abgesagt', label: 'Abgesagt' },
+]
+export const appointmentStatusLabel = (v) => APPOINTMENT_STATUSES.find((s) => s.value === v)?.label ?? v
+
+// "80-85, 90, 972" -> passt die PLZ in einen der Bereiche? (Vergleich über die Präfixlänge)
+export function zipInRegions(zip, regions) {
+  if (!zip || !regions) return false
+  return regions.split(/[,;\s]+/).filter(Boolean).some((part) => {
+    const [a, b = a] = part.split('-').map((x) => x.trim())
+    if (!/^\d+$/.test(a) || !/^\d+$/.test(b)) return false
+    const p = zip.slice(0, a.length)
+    return p >= a && p <= b.padEnd(a.length, '9')
+  })
+}

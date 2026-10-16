@@ -200,7 +200,7 @@ export default function Dialer() {
           <div className="panel">
             <h2>{phase === 'wrapup' ? 'Nachbearbeitung' : inCall ? 'Im Gespräch' : 'Bereit'}</h2>
             {(phase === 'calling' || phase === 'wrapup') && phone.call?.callId && !phone.call.saved ? (
-              <OutcomeForm key={phone.call.callId} lead={lead} callId={phone.call.callId}
+              <OutcomeForm key={phone.call.callId} lead={lead} contacts={details.contacts} callId={phone.call.callId}
                 submitLabel={paused ? 'Speichern' : 'Speichern & nächster ›'} onSaved={onSaved} />
             ) : savedDuringCall.current && inCall ? (
               <p className="success">Gespeichert – nach dem Auflegen geht es automatisch weiter.</p>

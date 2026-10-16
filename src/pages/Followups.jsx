@@ -47,7 +47,7 @@ export default function Followups() {
         {isAdmin && (
           <select value={user} onChange={(e) => setUser(e.target.value)} style={{ width: 'auto' }}>
             <option value="">Alle Mitarbeiter</option>
-            {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            {profiles.filter((p) => p.role !== 'berater').map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         )}
       </div>

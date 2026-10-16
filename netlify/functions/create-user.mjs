@@ -15,6 +15,6 @@ export default async (req) => {
   })
   if (error) return json({ error: error.message }, 400)
 
-  await db.from('profiles').update({ name, role: role === 'admin' ? 'admin' : 'mitarbeiter' }).eq('id', data.user.id)
+  await db.from('profiles').update({ name, role: ['admin', 'berater'].includes(role) ? role : 'mitarbeiter' }).eq('id', data.user.id)
   return json({ id: data.user.id })
 }

@@ -256,7 +256,7 @@ export default function Import() {
               <label>Direkt zuweisen an (optional)</label>
               <select value={assignTo} onChange={(e) => setAssignTo(e.target.value)}>
                 <option value="">– niemandem –</option>
-                {profiles.filter((p) => p.active).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                {profiles.filter((p) => p.active && p.role !== 'berater').map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
             <div>
