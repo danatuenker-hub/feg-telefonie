@@ -17,7 +17,7 @@ const TARGETS = [
   ['zip', 'PLZ', ['plz', 'postleitzahl', 'zip']],
   ['city', 'Ort', ['ort', 'stadt', 'city']],
   ['state', 'Bundesland', ['bundesland', 'land', 'state']],
-  ['industry', 'Branche', ['branche', 'industry', 'kategorie']],
+  ['industry', 'Branche', ['branche', 'industry', 'kategorie', 'zielgruppe', 'segment']],
   ['contact_name', 'Ansprechpartner', ['ansprechpartner', 'kontakt', 'kontaktperson', 'contact']],
   ['contact_position', 'Position', ['position', 'funktion', 'rolle']],
   ['contact_phone', 'Ansprechpartner Telefon', ['ansprechpartnertelefon', 'durchwahl']],
@@ -129,8 +129,8 @@ export default function Import() {
       const phones = prepared.map((p) => p.lead.phone)
       const existing = new Set()
       const blocked = new Set()
-      for (let i = 0; i < phones.length; i += 300) {
-        const chunk = phones.slice(i, i + 300)
+      for (let i = 0; i < phones.length; i += 150) {
+        const chunk = phones.slice(i, i + 150)
         const [a, b] = await Promise.all([
           supabase.from('leads').select('phone').in('phone', chunk),
           supabase.from('blocked_phones').select('phone').in('phone', chunk),
