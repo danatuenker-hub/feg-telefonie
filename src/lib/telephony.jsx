@@ -30,6 +30,7 @@ export function PhoneProvider({ children }) {
   const [incoming, setIncoming] = useState(null)
   const [attempt, setAttempt] = useState(0)
   const sessionRef = useRef(session)
+  const cleanupRef = useRef(null)
   sessionRef.current = session
 
   useEffect(() => {
@@ -43,9 +44,35 @@ export function PhoneProvider({ children }) {
         const token = await fetchToken(sessionRef.current)
         if (cancelled) return
         device = new Device(token, { codecPreferences: ['opus', 'pcmu'], edge: ['frankfurt', 'dublin'], closeProtection: true })
-        device.on('registered', () => setStatus('ready'))
-        device.on('error', (e) => setError(`${e.code ? e.code + ': ' : ''}${e.message}`))
-        device.on('tokenWillExpire', async () => device.updateToken(await fetchToken(sessionRef.current)))
+        // Token erneuern – auch wenn der Laptop geschlafen hat und der Token schon abgelaufen ist
+        let lastToken = Date.now()
+        const refresh = async () => {
+          try {
+            const { data } = await supabase.auth.getSession()
+            device.updateToken(await fetchToken(data.session ?? sessionRef.current))
+            lastToken = Date.now()
+            setError('')
+            if (device.state !== 'registered') await device.register()
+          } catch (e) {
+            setError(`Verbindung wird erneuert … (${e.message})`)
+          }
+        }
+        device.on('registered', () => { setStatus('ready'); setError('') })
+        device.on('unregistered', () => setStatus('offline'))
+        device.on('error', (e) => {
+          if ([20101, 20104, 31204, 31205].includes(e.code)) return refresh()
+          setError(`${e.code ? e.code + ': ' : ''}${e.message}`)
+        })
+        device.on('tokenWillExpire', refresh)
+        const onVisible = () => {
+          if (document.visibilityState === 'visible' && Date.now() - lastToken > 45 * 60000) refresh()
+        }
+        document.addEventListener('visibilitychange', onVisible)
+        window.addEventListener('focus', onVisible)
+        cleanupRef.current = () => {
+          document.removeEventListener('visibilitychange', onVisible)
+          window.removeEventListener('focus', onVisible)
+        }
         device.on('incoming', (conn) => {
           setIncoming(conn)
           const clear = () => setIncoming((c) => (c === conn ? null : c))
@@ -62,6 +89,7 @@ export function PhoneProvider({ children }) {
     })()
     return () => {
       cancelled = true
+      cleanupRef.current?.()
       device?.destroy()
       deviceRef.current = null
       setStatus('offline')
