@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { buildLeadQuery, filtersFromParams } from '../lib/leadQuery'
+import { prepareFilters } from '../lib/geo'
 import { usePhone } from '../lib/telephony'
 import { formatPhone } from '../lib/phone'
 import { fmtDate, fmtDateTime } from '../lib/format'
@@ -13,7 +14,8 @@ const FINAL = ['termin', 'kein_interesse', 'bereits_kunde', 'ungueltig', 'gesper
 
 // Anrufliste aus den Filtern der Leadliste. Abgeschlossene Leads und Leads mit
 // zukünftiger Wiedervorlage werden übersprungen; fällige Wiedervorlagen kommen zuerst.
-async function loadQueue(filters) {
+async function loadQueue(rawFilters) {
+  const filters = await prepareFilters(rawFilters)
   const ids = []
   for (let from = 0; from < 5000; from += 1000) {
     let q = buildLeadQuery({ ...filters, sort: 'followup' }, { select: 'id, next_followup_at' })

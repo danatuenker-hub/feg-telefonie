@@ -3,7 +3,7 @@ import { supabase } from './supabase'
 // Filter liegen als URL-Parameter vor, damit Zurück-Button und Lesezeichen funktionieren.
 // Der Power Dialer nutzt später dieselbe Funktion für seine Anrufliste.
 export const FILTER_KEYS = [
-  'q', 'industry', 'state', 'zipFrom', 'zipTo', 'city', 'status', 'outcome', 'assigned',
+  'q', 'industry', 'state', 'zipFrom', 'zipTo', 'city', 'near', 'km', 'status', 'outcome', 'assigned',
   'list', 'lastFrom', 'lastTo', 'never', 'minCalls', 'maxCalls', 'due', 'sort',
 ]
 
@@ -40,6 +40,7 @@ export function buildLeadQuery(f, { select = '*', count } = {}) {
   if (f.outcome) q = q.in('last_outcome', f.outcome.split('|'))
   if (f.zipFrom) q = q.gte('zip', f.zipFrom.padEnd(5, '0'))
   if (f.zipTo) q = q.lte('zip', f.zipTo.padEnd(5, '9'))
+  if (f.zipIn) q = q.in('zip', f.zipIn.length ? f.zipIn : ['-']) // Umkreissuche (siehe lib/geo.js)
   if (f.city) q = q.ilike('city', `%${f.city}%`)
   if (f.list) q = q.eq('list_id', f.list)
   if (f.assigned === 'none') q = q.is('assigned_to', null)

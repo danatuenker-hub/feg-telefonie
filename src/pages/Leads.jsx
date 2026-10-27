@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { useProfiles } from '../lib/useProfiles'
 import { buildLeadQuery, filtersFromParams } from '../lib/leadQuery'
+import { prepareFilters } from '../lib/geo'
 import { OUTCOMES, STATUSES, outcomeLabel, statusLabel } from '../lib/constants'
 import { formatPhone } from '../lib/phone'
 import { fmtDateTime } from '../lib/format'
@@ -36,15 +37,19 @@ export default function Leads() {
   }, [])
 
   useEffect(() => {
+    let stale = false
     setLoading(true)
-    buildLeadQuery(filters, { count: true })
-      .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
+    prepareFilters(filters)
+      .then((f) => buildLeadQuery(f, { count: true }).range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1))
       .then(({ data, count, error }) => {
+        if (stale) return
         setError(error?.message ?? '')
         setRows(data ?? [])
         setTotal(count ?? 0)
         setLoading(false)
       })
+      .catch((e) => { if (!stale) { setError(e.message); setRows([]); setTotal(0); setLoading(false) } })
+    return () => { stale = true }
   }, [filters, page, reload])
 
   useEffect(() => { setSelected(new Set()); setAllMatching(false) }, [filters])
@@ -80,8 +85,9 @@ export default function Leads() {
   async function targetIds() {
     if (!allMatching) return [...selected]
     const ids = []
+    const f = await prepareFilters(filters)
     for (let from = 0; ; from += 1000) {
-      const { data, error } = await buildLeadQuery(filters, { select: 'id' }).range(from, from + 999)
+      const { data, error } = await buildLeadQuery(f, { select: 'id' }).range(from, from + 999)
       if (error) throw error
       ids.push(...data.map((r) => r.id))
       if (data.length < 1000) break
@@ -167,6 +173,17 @@ export default function Leads() {
           </div>
         </div>
         <div>
+          <label>Umkreis um Ort oder PLZ</label>
+          <div className="row" style={{ flexWrap: 'nowrap', gap: 6 }}>
+            <input defaultValue={filters.near ?? ''} key={'n' + (filters.near ?? '')} placeholder="z. B. Düsseldorf"
+              onBlur={(e) => e.target.value.trim() !== (filters.near ?? '') && setFilter('near', e.target.value.trim())}
+              onKeyDown={(e) => e.key === 'Enter' && setFilter('near', e.target.value.trim())} />
+            <select value={filters.km ?? '25'} onChange={(e) => setFilter('km', e.target.value)} style={{ width: 90 }}>
+              {['0', '10', '15', '20', '25', '30', '40', '50'].map((k) => <option key={k} value={k}>{k === '0' ? 'nur Ort' : `${k} km`}</option>)}
+            </select>
+          </div>
+        </div>
+        <div>
           <label>Ort</label>
           <input defaultValue={filters.city ?? ''} key={'c' + (filters.city ?? '')}
             onBlur={(e) => setFilter('city', e.target.value.trim())}
@@ -231,6 +248,7 @@ export default function Leads() {
         </div>
       </div>
 
+      {filters.near && <p className="small muted" style={{ marginTop: -8 }}>Umkreissuche über die PLZ der Leads · PLZ-Koordinaten: <a href="https://www.geonames.org" target="_blank" rel="noreferrer">GeoNames</a> (CC BY 4.0)</p>}
       {error && <p className="error">{error}</p>}
 
       <div className="table-wrap">

@@ -25,6 +25,7 @@ React (Vite) auf Netlify, Datenbank und Login über Supabase. Twilio wird für d
 | Kalender-Abo (iCal) für Berater, Rückmeldung nach Termin, Termin-Auswertung | ✅ |
 | Freie Beratertermine beim Lead/Power Dialer und als Berater-Kalender, Klick legt Termin an | ✅ |
 | Telegram-Erinnerung 1 Stunde vor dem Termin, Aufnahme für den Berater | ✅ |
+| Umkreissuche (Ort oder PLZ + km) in Leadliste und Power Dialer | ✅ |
 | Transkription | ⏳ |
 
 ## Einrichtung
@@ -128,3 +129,8 @@ firma;telefon;telefon2;email;website;strasse;plz;ort;bundesland;branche;ansprech
 
 Zugriffsrechte sind in der Datenbank (Row Level Security) hinterlegt:
 Mitarbeiter sehen und bearbeiten nur ihnen zugewiesene Leads; nur Admins importieren, weisen zu und löschen.
+
+## Datenquellen
+
+PLZ-Koordinaten für die Umkreissuche (`src/data/plz-geo.json`): [GeoNames](https://www.geonames.org), Lizenz [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/),
+erzeugt mit `scripts/build-plz-geo.py` aus dem Export von [zauberware/postal-codes-json-xml-csv](https://github.com/zauberware/postal-codes-json-xml-csv).
