@@ -1,5 +1,5 @@
 import twilio from 'twilio'
-import { fnUrl, isAllowedNumber, supabaseAdmin, twilioParams, xml } from '../lib/server.mjs'
+import { fnUrl, isAllowedNumber, recordingMode, supabaseAdmin, twilioParams, xml } from '../lib/server.mjs'
 
 // Voice-URL der TwiML-App (ausgehend aus dem Browser) und der Twilio-Rufnummern (eingehend).
 export default async (req) => {
@@ -27,16 +27,21 @@ export default async (req) => {
         .eq('id', p.callId).eq('user_id', userId)
     }
 
+    // Nur im Modus "announce" wird automatisch mit Ansage aufgezeichnet.
+    // Im Modus "manual" startet der Agent die Aufnahme nach Zustimmung (Funktion twilio-record).
+    const announce = recordingMode() === 'announce'
     const dial = vr.dial({
       callerId,
       answerOnBridge: true,
       timeout: 30,
-      record: 'record-from-answer-dual',
-      recordingStatusCallback: fnUrl(req, 'twilio-recording'),
-      recordingStatusCallbackEvent: ['completed'],
+      ...(announce && {
+        record: 'record-from-answer-dual',
+        recordingStatusCallback: fnUrl(req, 'twilio-recording'),
+        recordingStatusCallbackEvent: ['completed'],
+      }),
     })
     dial.number({
-      url: fnUrl(req, 'twilio-announce'),
+      ...(announce && { url: fnUrl(req, 'twilio-announce') }),
       statusCallback: fnUrl(req, 'twilio-status'),
       statusCallbackEvent: ['answered', 'completed'],
     }, to)

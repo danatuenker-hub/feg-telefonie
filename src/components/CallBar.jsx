@@ -8,7 +8,7 @@ const STATE_LABEL = { connecting: 'Verbinde…', ringing: 'Klingelt…', open: '
 
 // Schwebende Anrufleiste unten rechts: laufender Anruf und eingehende Rückrufe.
 export default function CallBar() {
-  const { call, incoming, hangup, toggleMute, sendDigits, acceptIncoming, rejectIncoming } = usePhone()
+  const { call, incoming, hangup, toggleMute, sendDigits, acceptIncoming, rejectIncoming, recordingMode, startRecording } = usePhone()
   const [now, setNow] = useState(Date.now())
   const [keypad, setKeypad] = useState(false)
 
@@ -39,6 +39,12 @@ export default function CallBar() {
         <div className="small">{formatPhone(call.number)} · {STATE_LABEL[call.state]}{call.state === 'open' && ` · ${fmtDuration(secs)}`}</div>
       </div>
       <div className="row">
+        {recordingMode === 'manual' && call.state === 'open' && call.callId && (
+          call.recording === 'on'
+            ? <span className="rec-on">● Aufnahme läuft</span>
+            : <button className="rec" disabled={call.recording === 'starting'} onClick={startRecording}
+                title="Nur nach ausdrücklicher Zustimmung des Kunden starten">● Aufnahme starten</button>
+        )}
         <button onClick={toggleMute}>{call.muted ? 'Ton an' : 'Stumm'}</button>
         <button onClick={() => setKeypad(!keypad)}>Tasten</button>
         <button className="danger-fill" onClick={hangup}>Auflegen</button>

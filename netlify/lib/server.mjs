@@ -50,3 +50,12 @@ export const fnUrl = (req, name, query = '') => {
 // Nur Deutschland und Österreich
 export const ALLOWED_PREFIXES = ['+49', '+43']
 export const isAllowedNumber = (n) => /^\+\d{6,15}$/.test(n ?? '') && ALLOWED_PREFIXES.some((p) => n.startsWith(p))
+
+// Aufnahme-Modus (Netlify-Variable RECORDING_MODE):
+//   manual   = keine Ansage; der Agent startet die Aufnahme per Knopf nach mündlicher Zustimmung (Standard)
+//   announce = automatische Ansage beim Abheben und Aufnahme jedes Gesprächs
+//   off      = keine Aufnahmen
+export const recordingMode = () => {
+  const m = (process.env.RECORDING_MODE ?? '').trim().toLowerCase()
+  return ['announce', 'off'].includes(m) ? m : 'manual'
+}

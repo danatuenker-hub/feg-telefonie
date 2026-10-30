@@ -79,9 +79,15 @@ React (Vite) auf Netlify, Datenbank und Login über Supabase. Twilio wird für d
    | `TWILIO_TWIML_APP_SID` | TwiML App SID (`AP…`) |
    | `TWILIO_CALLER_ID` | Standard-Absendernummer, z. B. `+4917612345678` |
    | `RECORDING_RETENTION_DAYS` | optional, Standard `90` |
+   | `RECORDING_MODE` | optional: `manual` (Standard), `announce` oder `off` |
 
 Pro Mitarbeiter kann unter *Mitarbeiter → Anzeige-Rufnummer* eine eigene Absendernummer hinterlegt werden.
-Jeder Anruf beginnt beim Angerufenen mit der Ansage „Dieses Gespräch wird zur Qualitätssicherung aufgezeichnet.“
+**Aufnahmen** – Netlify-Variable `RECORDING_MODE`:
+- `manual` (Standard): keine Ansage; der Agent fragt den Kunden und startet die Aufnahme nur bei Zustimmung über „● Aufnahme starten“ in der Anrufleiste.
+- `announce`: jedes Gespräch beginnt mit der Ansage „Dieses Gespräch wird zur Qualitätssicherung aufgezeichnet.“ und wird aufgenommen.
+- `off`: keine Aufnahmen.
+
+Ohne Zustimmung des Gesprächspartners darf nicht aufgezeichnet werden (§ 201 StGB).
 
 ### 4. Termine und Telegram
 

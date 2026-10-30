@@ -1,5 +1,5 @@
 import twilio from 'twilio'
-import { json, requireUser, supabaseAdmin } from '../lib/server.mjs'
+import { json, recordingMode, requireUser, supabaseAdmin } from '../lib/server.mjs'
 
 // Gibt dem Browser ein Zugangstoken für das Twilio Voice SDK (1 Stunde gültig).
 const REQUIRED = ['TWILIO_ACCOUNT_SID', 'TWILIO_API_KEY', 'TWILIO_API_SECRET', 'TWILIO_TWIML_APP_SID', 'TWILIO_AUTH_TOKEN', 'SUPABASE_SERVICE_ROLE_KEY', 'VITE_SUPABASE_URL']
@@ -27,5 +27,5 @@ export default async (req) => {
     outgoingApplicationSid: process.env.TWILIO_TWIML_APP_SID.trim(),
     incomingAllow: true,
   }))
-  return json({ token: token.toJwt(), identity: user.id })
+  return json({ token: token.toJwt(), identity: user.id, recordingMode: recordingMode() })
 }

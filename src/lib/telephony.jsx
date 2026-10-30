@@ -15,8 +15,13 @@ async function fetchToken(session) {
     try { msg = JSON.parse(body).error } catch { msg = body.slice(0, 200) }
     throw new Error(`Token-Abruf fehlgeschlagen (HTTP ${res.status}): ${msg || 'keine Details'}`)
   }
-  return (await res.json()).token
+  const body = await res.json()
+  recordingModeCache = body.recordingMode ?? 'manual'
+  return body.token
 }
+
+// Vom Server gemeldeter Aufnahme-Modus: manual | announce | off
+let recordingModeCache = 'manual'
 
 // Hält die Twilio-Verbindung des Browsers und den aktuellen Anruf.
 // call.state: connecting -> ringing -> open -> ended
@@ -29,6 +34,7 @@ export function PhoneProvider({ children }) {
   const [call, setCall] = useState(null)
   const [incoming, setIncoming] = useState(null)
   const [attempt, setAttempt] = useState(0)
+  const [recordingMode, setRecordingMode] = useState('manual')
   const sessionRef = useRef(session)
   const cleanupRef = useRef(null)
   sessionRef.current = session
@@ -42,6 +48,7 @@ export function PhoneProvider({ children }) {
     ;(async () => {
       try {
         const token = await fetchToken(sessionRef.current)
+        setRecordingMode(recordingModeCache)
         if (cancelled) return
         device = new Device(token, { codecPreferences: ['opus', 'pcmu'], edge: ['frankfurt', 'dublin'], closeProtection: true })
         // Token erneuern – auch wenn der Laptop geschlafen hat und der Token schon abgelaufen ist
@@ -164,7 +171,26 @@ export function PhoneProvider({ children }) {
 
   const rejectIncoming = useCallback(() => { incoming?.reject(); setIncoming(null) }, [incoming])
 
-  const value = { status, error, reconnect, call, incoming, dial, hangup, toggleMute, sendDigits, clearCall, acceptIncoming, rejectIncoming }
+  // Aufnahme nach mündlicher Zustimmung starten (Modus "manual")
+  const startRecording = useCallback(async () => {
+    if (!call?.callId) return
+    setCall((c) => (c ? { ...c, recording: 'starting' } : c))
+    const { data } = await supabase.auth.getSession()
+    const res = await fetch('/.netlify/functions/twilio-record', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token}` },
+      body: JSON.stringify({ callId: call.callId }),
+    })
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      setCall((c) => (c ? { ...c, recording: null } : c))
+      setError(body.error ?? `Aufnahme fehlgeschlagen (HTTP ${res.status})`)
+      return
+    }
+    setCall((c) => (c ? { ...c, recording: 'on' } : c))
+  }, [call?.callId])
+
+  const value = { status, error, reconnect, recordingMode, startRecording, call, incoming, dial, hangup, toggleMute, sendDigits, clearCall, acceptIncoming, rejectIncoming }
   return <PhoneContext.Provider value={value}>{children}</PhoneContext.Provider>
 }
 
